@@ -1,0 +1,14 @@
+{
+  "name": "appium-test",
+  "version": "1.0.0",
+  "description": "Test framework for Appiup",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "author": "vadzim.rudz",
+  "license": "ISC",
+  "devDependencies": {
+    "webdriverio": "^9.14.0"
+  }
+}
