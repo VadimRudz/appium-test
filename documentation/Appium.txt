@@ -1,0 +1,218 @@
+1. Что такое Appium?
+Appium — это кроссплатформенный фреймворк для автоматизации мобильных приложений, позволяющий писать тесты для:
+нативных приложений,
+гибридных приложений,
+мобильных веб-приложений
+на iOS, Android, Windows.
+
+Appium реализует WebDriver-протокол (W3C WebDriver) и общается с мобильным устройством через Appium Server, что делает
+его независимым от языка программирования — ты можешь писать тесты на JavaScript, Python, Java, Ruby и др.
+
+2. Разница между нативными, гибридными и мобильными веб-приложениями
+Тип приложения	Описание	Примеры
+Нативное	Написано на платформенных SDK (Java/Kotlin для Android, Swift/Obj-C для iOS), использует весь функционал устройства.	Камера, Контакты, WhatsApp
+Гибридное	WebView внутри нативной оболочки. Интерфейс частично/полностью на HTML/JS/CSS.	Instagram, Uber (ранние версии)
+Мобильное веб	Открывается через браузер на устройстве.	m.facebook.com, m.amazon.com
+
+В Appium:
+Нативное = automationName: UiAutomator2/XCUITest
+Гибридное = требует переключения контекста (driver.context(...))
+Мобильное веб = работает как Selenium, но с browserName и мобильным девайсом
+
+3. Архитектура Appium
+Appium построен по клиент-серверной архитектуре:
+
+plaintext
+  Client (тест на JS/Python/Java)
+        │
+        ▼
+  Appium Server (Node.js) ↔ Appium Drivers (UIAutomator2, XCUITest, etc.)
+        │
+        ▼
+  Mobile Device / Emulator
+Appium Server: принимает команды по HTTP (WebDriver), управляет сессиями и логикой.
+
+Appium Drivers:
+UiAutomator2 — для Android API 21+
+Espresso — для более глубокого Android UI-тестирования
+XCUITest — для iOS
+WebView/WebDriverAgent — для гибридных и web-приложений
+
+Device: запускает приложение, взаимодействует с UI, отдает результат обратно
+
+4. Чем Appium отличается от других инструментов
+Инструмент	Отличие
+Appium	Кроссплатформенный, open-source, поддерживает нативные/гибридные/web-apps
+Espresso (Android)	Интегрирован в Android SDK, быстрый, но требует доступа к коду
+XCUITest (iOS)	Apple-нативный, быстрый, ограничен iOS
+Detox	JS-based e2e для React Native, синхронный, требует билдов
+Robot Framework	Более декларативный, Python-базированный
+
+Appium универсален, но не самый быстрый. Его основное преимущество — гибкость и масштабируемость.
+
+5. Что необходимо установить перед настройкой Appium для Android и iOS
+✅ Для Android:
+Java (JDK)
+Android SDK
+Android Studio (для AVD/emulator)
+Node.js (для Appium)
+Appium (npm install -g appium)
+appium-doctor для проверки окружения
+Установить драйвер: appium driver install uiautomator2
+
+Настроить переменные окружения:
+JAVA_HOME
+ANDROID_HOME
+добавить platform-tools в PATH
+
+✅ Для iOS (macOS only):
+Xcode + Command Line Tools
+Node.js
+Appium
+appium driver install xcuitest
+WebDriverAgent (настраивается внутри Appium XCUITest Driver)
+iOS Simulators
+
+Подписанный .app файл или доступ к исходникам
+
+6. Как Appium обрабатывает жесты: пролистывание, тап, скролл
+С версии Appium 2 используются W3C Actions API или TouchAction (устаревший).
+
+Примеры:
+Тап:
+
+js
+await driver.touchPerform([
+  { action: 'tap', options: { x: 100, y: 200 } }
+]);
+Swipe / scroll (W3C Actions):
+
+js
+await driver.performActions([{
+  type: 'pointer',
+  id: 'finger1',
+  parameters: { pointerType: 'touch' },
+  actions: [
+    { type: 'pointerMove', duration: 0, x: 500, y: 1200 },
+    { type: 'pointerDown', button: 0 },
+    { type: 'pause', duration: 500 },
+    { type: 'pointerMove', duration: 1000, x: 500, y: 300 },
+    { type: 'pointerUp', button: 0 }
+  ]
+}]);
+Можно также использовать mobile: scroll и mobile: swipe (iOS/Android специфичные команды).
+
+7. Как Appium находит элементы
+Appium поддерживает разнообразные локаторы:
+
+Метод	Пример
+id	driver.$('id=com.app:id/button')
+accessibility id	driver.$('~LoginButton')
+xpath	driver.$('//android.widget.TextView[@text="Welcome"]')
+class name	driver.$('android.widget.Button')
+android uiautomator	driver.$('android=new UiSelector().text("Login")')
+iOS predicate string	driver.$('-ios predicate string:label == "Submit" AND type == "XCUIElementTypeButton"')
+
+Рекомендуется: Accessibility ID → ID → UiSelector → XPath (в крайнем случае)
+
+8. Как работать с алертами и поп-апами
+Appium может автоматически или вручную управлять алертами:
+
+iOS:
+await driver.acceptAlert();
+await driver.dismissAlert();
+Android:
+Алерты можно обрабатывать как обычные элементы:
+
+const allowBtn = await driver.$('id=com.android.packageinstaller:id/permission_allow_button');
+await allowBtn.click();
+Можно использовать driver.isAlertOpen() и driver.getAlertText().
+
+Также можно настроить autoAcceptAlerts в capabilities (временно).
+
+9. Параллельный запуск Appium-тестов на нескольких устройствах
+Варианты:
+
+🛠 Требования:
+Несколько реальных устройств или эмуляторов
+
+Несколько Appium-серверов с уникальными портами и --udid
+
+Уникальные systemPort (Android) или wdaLocalPort (iOS)
+
+Пример:
+bash
+appium -p 4723 --default-capabilities '{"udid":"device1", "systemPort":8200}'
+appium -p 4725 --default-capabilities '{"udid":"device2", "systemPort":8201}'
+В тестах:
+
+js
+const capabilities = {
+  udid: 'device1',
+  systemPort: 8200,
+  ...
+};
+📦 Инструменты для параллелизации:
+Mocha + WDIO test runner (через wdio.conf.js, capabilities в массиве)
+
+TestNG/Gradle (Java)
+
+Docker + Appium Grid — advanced use-case
+
+----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+
+Appium -> Appium(JS)
+
+Steps to set up all:
+- https://appium.io/docs/en/2.2/quickstart/uiauto2-driver/
+- https://appium.io/docs/en/2.2/quickstart/test-js/
+
+Note: Before running the script you need to run in any terminal to have running server:
+appium --port 4724 --allow-insecure=chromedriver_autodownload
+
+Note: Run the script:
+node test.js
+
+🧠 Что делает appium?
+Команда appium запускает сервер Appium, который:
+ - принимает подключения от клиентов (например, твоего JS-теста)
+ - управляет устройствами или эмуляторами
+ - взаимодействует с приложениями через драйверы (UiAutomator2, XCUITest, WebDriverAgent, и т.д.)
+
+🔁 Зачем запускать перед каждым запуском тестов?
+Потому что Appium не является постоянным фоновым процессом, как, например, браузер. Он должен быть запущен вручную или через CI-пайплайн перед каждым прогоном тестов.
+Если ты не запустишь Appium, то твой JS-тест с WebdriverIO вызовет ошибку подключения:
+
+C:\Development\Repositories\appium-test>appium driver install uiautomator2
+✔ Checking if 'appium-uiautomator2-driver' is compatible
+✔ Installing 'uiautomator2'
+ℹ Driver uiautomator2@4.2.3 successfully installed
+- automationName: UiAutomator2
+- platformNames: ["Android"]
+
+📌 Настройки которые я видел при установки Appium:
+
+C:\Development\Repositories\appium-test>appium
+[Appium] Welcome to Appium v2.18.0
+[Appium] The autodetected Appium home path: C:\Users\user\.appium
+[Appium] Attempting to load driver uiautomator2...
+[Appium] Requiring driver at C:\Users\user\.appium\node_modules\appium-uiautomator2-driver\build\index.js
+[Appium] AndroidUiautomator2Driver has been successfully loaded in 9.809s
+[Appium] Appium REST http interface listener started on http://0.0.0.0:4723
+[Appium] You can provide the following URLs in your client code to connect to this server:
+        http://192.168.110.247:4723/
+        http://172.31.5.97:4723/
+        http://127.0.0.1:4723/ (only accessible from the same host)
+[Appium] Available drivers:
+[Appium]   - uiautomator2@4.2.3 (automationName 'UiAutomator2')
+[Appium] No plugins have been installed. Use the "appium plugin" command to install the one(s) you want to use.
+
+📌 APPIUM Google Data:  olegrutkovskie@gmail.com / passwordKing2025_2!
+
+📌 Можно установить любые приложения для виртуального устройства для Android studio.
+Где можно скачать приложения: в App store (на самом девайсе) или на сайте мобильных приложений в формате .apk (например здесь https://apkpure.com/search?q=Calculator) 
+и затем просто нужно установить приложение на запущенное виртуальное устройство используя команду (для скаченного калькулятора например):
+  adb install C:\Users\user\Downloads\Calculator_8.7 (735708245)_APKPure.apk
+
+
+
